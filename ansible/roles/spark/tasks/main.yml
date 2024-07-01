@@ -1,0 +1,32 @@
+---
+
+# Different urls here because spark-operator several times hat ImagePullBackOff Error because of a missing repository link
+
+#- name: "[spark] add helm repository"
+#  kubernetes.core.helm_repository:
+#    name: "spark-operator"
+#    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+#    #repo_url: "https://ghcr.io/googlecloudplatform/spark-operator"
+#    #repo_url: "https://github.com/kubeflow/spark-operator/"
+#    repo_url: "https://kubeflow.github.io/spark-operator/"
+
+#########################################################################################################################
+# We deploy spark from local .tgz for now until the repository is back up and doesn't run into a failure while deploying
+- name: "[spark] Deploy specified version (latest) of the spark-operator chart inside specified namespace"
+  kubernetes.core.helm:
+    name: spark
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    #chart_ref: spark-operator/spark-operator
+    chart_ref: "{{ playbook_dir }}/spark-operator-1.2.14.tgz"
+    release_namespace: "{{ spark_ns }}"
+    create_namespace: "{{ spark_ns_needs_creation }}"
+    values:
+        sparkJobNamespaces: 
+            - "{{ spark_ns }}"
+
+- name: "[spark] Deploy manual ServiceAccount to control all pods and jobs"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    template:
+      path: "spark-serviceaccount-rbac.yaml.j2"

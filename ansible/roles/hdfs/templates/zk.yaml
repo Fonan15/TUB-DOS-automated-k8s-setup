@@ -1,0 +1,13 @@
+---
+apiVersion: zookeeper.stackable.tech/v1alpha1
+kind: ZookeeperCluster
+metadata:
+  name: simple-zk
+  namespace: "{{ hdfs_ns }}"
+spec:
+  image:
+    productVersion: "{{ hdfs_zk_version }}"
+  servers:
+    roleGroups:
+      default:
+        replicas: "{{ hdfs_zk_replicas }}"

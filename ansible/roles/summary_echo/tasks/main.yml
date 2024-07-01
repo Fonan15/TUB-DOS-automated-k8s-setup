@@ -1,0 +1,17 @@
+---
+
+- name: "[entry] moving templated script to /tmp/"
+  template:
+    src: build_entrypoints.sh.j2
+    dest: /tmp/build_entrypoints.sh
+    owner: root
+    group: root
+    mode: 0775
+
+- name: "[entry] Building entrypoints"
+  script: /tmp/build_entrypoints.sh
+
+- name: "[entry] Delete build_entrypoint.sh"
+  ansible.builtin.file:
+    path: /tmp/build_entrypoints.sh
+    state: absent

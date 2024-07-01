@@ -1,0 +1,12 @@
+all:
+  hosts:
+  # label
+    localhost:
+            # IP/Hostname des Clients
+            ansible_host: 127.0.0.1
+            # mit welchem Account verbindet sich ansible
+            # (muss vorhanden sein)
+            remote_user: user
+            # Wird gebraucht für die Automatisierung
+            # auf dem Remote-Rechner
+            ansible_python_interpreter: /usr/bin/python3

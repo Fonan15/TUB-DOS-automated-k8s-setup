@@ -1,0 +1,55 @@
+#! /bin/bash
+
+touch {{ playbook_dir }}/entrypoints.txt
+chown {{ remote_user }}:{{ remote_user }} {{ playbook_dir }}/entrypoints.txt
+
+echo "    This File is located at {{ playbook_dir }}/entrypoints.txt" >> {{ playbook_dir }}/entrypoints.txt
+sed -n '5,5p' {{ playbook_dir }}/kubeconfig >> {{ playbook_dir }}/entrypoints.txt
+sed -i 's/^....//' {{ playbook_dir }}/entrypoints.txt
+
+{% if Remote_Local == "local" %}
+    echo "The Kubernetes cluster is a local instance via kind" >> {{ playbook_dir }}/entrypoints.txt
+{% else %}
+    echo "The Kubernetes cluster is a remote instance supplied via kubeconfig at {{ custom_kubeconfig }}" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}
+echo "The main namespace is called: \"{{ k8s_ns }}\"" >> {{ playbook_dir }}/entrypoints.txt
+echo "" >> {{ playbook_dir }}/entrypoints.txt
+
+echo "The following ports are active:" >> {{ playbook_dir }}/entrypoints.txt
+echo "===============================" >> {{ playbook_dir }}/entrypoints.txt
+
+{% if Prometheus == true %}
+    echo "Prometheus Port: {{ prometheus_nodePort }}" >> {{ playbook_dir }}/entrypoints.txt
+    echo "Grafana Port: {{ grafana_nodePort }}  |  admin / {{ grafana_PW }}" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}
+
+{% if Cassandra == true %}
+    echo "Cassandra Port: {{ cassandra_nodePort }}" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}
+
+{% if HDFS == true %}
+    echo "HDFS Port: {{ hdfs_nodePort }}" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}
+
+{% if MinIO == true %}
+    echo "MinIO Operator Port: {{ minio_nodePort }}" >> {{ playbook_dir }}/entrypoints.txt
+    echo "MinIO Token:" >> {{ playbook_dir }}/entrypoints.txt
+    /bin/bash /tmp/tokenAccess.sh >> {{ playbook_dir }}/entrypoints.txt
+    sed -i 'N;$!P;D' {{ playbook_dir }}/entrypoints.txt
+    rm /tmp/tokenAccess.sh
+    IP=$(cat {{ playbook_dir }}/kubeconfig | grep -E -o "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")
+
+    echo "MinIO Tenant Console: https://$IP/{{ tenant_nodePort }}  |  {{ tenant_user }} / {{ tenant_PW }}" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}
+
+{% if Kafka == true %}
+    echo "Kafka Port: {{ kafka_nodePort }}" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}
+
+echo "" >> {{ playbook_dir }}/entrypoints.txt
+
+{% if Flink_Spark == "spark" %}
+    echo "The Kubernetes cluster is running a spark instance with a job from \"{{ spark_job_path }}\"" >> {{ playbook_dir }}/entrypoints.txt
+{% else %}
+    echo "The Kubernetes cluster is running a flink instance" >> {{ playbook_dir }}/entrypoints.txt
+{% endif %}

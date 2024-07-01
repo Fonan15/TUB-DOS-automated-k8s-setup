@@ -1,0 +1,12 @@
+---
+
+- name: "[precheck_kind] Check installed KinD version"
+  shell: "{{ kind_install_dir }}/kind --version | awk '{print $3}'"
+  changed_when: false
+  register: kind_installed_version
+  when: kind_status.stat.exists
+
+- name: "[install_kind] install KinD if different version than needed"
+  include_tasks:
+    file: install_kind.yml
+  when: kind_version == kind_installed_version.stdout

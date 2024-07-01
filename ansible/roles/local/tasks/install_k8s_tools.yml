@@ -1,0 +1,20 @@
+---
+
+- name: "[install_k8s] Install kubectl with option --classic"
+  community.general.snap:
+    name: kubectl
+    classic: true
+
+- name: "[install_k8s] Install helm with option --classic"
+  community.general.snap:
+    name: helm
+    classic: true
+
+- name: "[install_k8s] Install collection kubernetes.core"
+  community.general.ansible_galaxy_install:
+    type: collection
+    name: kubernetes.core
+
+- name: "[install_k8s] Install k8s python library"
+  ansible.builtin.pip:
+    name: kubernetes

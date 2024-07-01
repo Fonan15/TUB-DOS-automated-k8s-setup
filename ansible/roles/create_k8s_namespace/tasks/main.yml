@@ -1,0 +1,9 @@
+---
+
+- name: "[k8s_ns] Create the namespace"
+  kubernetes.core.k8s:
+    name: "{{ k8s_ns }}"
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    api_version: v1
+    kind: Namespace
+    state: present

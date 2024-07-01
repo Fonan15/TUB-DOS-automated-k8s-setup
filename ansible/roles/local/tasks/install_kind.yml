@@ -1,0 +1,11 @@
+---
+
+- name: "[kind] Download KinD to specified location {{ kind_install_dir }}"
+  get_url:
+    url: "{{ kind_repo }}"
+    dest: "{{ kind_install_dir }}/kind"
+    mode: 0755
+    force: true
+    owner: root
+    group: root
+  become: true

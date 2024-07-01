@@ -1,0 +1,9 @@
+---
+
+- name: "[cassandra] Deploy latest version of Cassandra chart inside monitoring namespace (and create it if needed)"
+  kubernetes.core.helm:
+    name: cassandra
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: "oci://registry-1.docker.io/bitnamicharts/cassandra"
+    release_namespace: "{{ cassandra_ns }}"
+    create_namespace: "{{ cassandra_ns_needs_creation }}"

@@ -1,0 +1,6 @@
+---
+
+- name: "[ECHO] Flink variable test"
+  debug:
+    msg:
+      - '{{ Flink_Spark }}'

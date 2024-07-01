@@ -1,0 +1,26 @@
+---
+- hosts: localhost
+  become: yes
+  become_method: sudo
+  vars_files:
+    - variables.yml
+
+  roles:
+  # install the tools needed to automate and manage the cluster
+  - prerequisites
+  # different setups depending if local or remote experiment
+  - { role: local, when: Remote_Local == 'local'}
+  - { role: remote, when: Remote_Local == 'remote'}
+  # from here on setup is identical
+  - create_k8s_namespace
+  - {role: prometheus, when: Prometheus == True}
+  - {role: hdfs, when: HDFS == True}
+  - {role: cassandra, when: Cassandra == True}  
+  - {role: flink, when: Flink_Spark == "flink"}
+  - {role: spark, when: Flink_Spark == "spark"}
+  - {role: minio, when: MinIO == True}
+  #- {role: spark-job, when: Flink_Spark == "spark"}
+  # ^^ not to be startet since the user does not have time to configure the job beforehand
+
+  # print all the necessary information into a summary statement
+  - summary_echo

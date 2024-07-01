@@ -1,0 +1,7 @@
+---
+
+- name: "[spark] Deploy job from a local file"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    template: "{{ spark_job_path }}"

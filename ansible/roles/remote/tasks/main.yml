@@ -1,0 +1,10 @@
+---
+
+- name: "[kubeconfig] copy kubeconfig to specified location"
+  copy:
+    src: "{{ k8s_kubeconfig }}"
+    dest: "{{ playbook_dir }}/kubeconfig"
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: yes

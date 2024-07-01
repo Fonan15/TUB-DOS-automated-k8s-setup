@@ -1,0 +1,29 @@
+---
+
+- name: "[precheck_kind] Prechecking KinD status"
+  include_tasks:
+    file: precheck_kind.yml
+
+- name: "[update_kind] Updating KinD if different version"
+  include_tasks:
+    file: update_kind.yml
+  when: kind_status.stat.exists
+
+- name: "[install_kind] install KinD if not installed"
+  include_tasks:
+    file: install_kind.yml
+  when: not kind_status.stat.exists
+
+- name: "[kind] create cluster if needed"
+  include_tasks:
+    file: kind_cluster_create.yml
+  when: Create_Cluster == True
+
+- name: "[kubeconfig] copy kubeconfig to specified location"
+  copy:
+    src: /root/.kube/config
+    dest: "{{ playbook_dir }}/kubeconfig"
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: true

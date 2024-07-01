@@ -1,0 +1,115 @@
+---
+####################################################
+# Basic Setup decisions - also asked in the wizard #
+####################################################
+# For now only spark is implemented but flink should be possible in the same way
+Remote_Local: local
+Flink_Spark: spark
+Create_Cluster: yes
+Prometheus: no
+MinIO: yes
+
+# Other components that can be implemented later
+Cassandra: no
+Cassandra_Connector: no
+HDFS: no
+Kafka: no
+
+# Main naming variables
+k8s_ns: experiment
+custom_kubeconfig: "{{ playbook_dir }}/tu-cluster-config"
+
+################################################################################
+# Config Variables that can be left on default but can be changed here at will #
+################################################################################
+# Local:
+################################################################################
+kind_version: latest
+kind_apiVersion: kind.x-k8s.io/v1alpha4
+kind_cluster_name: experiment-cluster
+kind_node_image: kindest/node:v1.28.0
+worker_nodes: 4
+kind_install_dir: /usr/bin
+kind_git: "https://api.github.com/repos/kubernetes-sigs/kind"
+kind_repo: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-amd64"
+
+################################################################################
+# Remote:
+################################################################################
+k8s_kubeconfig: "{{ custom_kubeconfig }}"
+
+################################################################################
+# Identical on all machines:
+################################################################################
+
+# Prometheus:
+################################################################################
+prometheus_ns: "{{ k8s_ns }}"
+prometheus_ns_needs_creation: false
+prometheus_chart_version: 34.9.0
+prometheus_nodePort: 30090
+grafana_nodePort: 30095
+grafana_internal_port: 80
+grafana_PW: root
+
+# MinIO:
+################################################################################
+minio_ns: "{{ k8s_ns }}"
+minio_kubectl_repo: "https://github.com/minio/operator/releases/download/v5.0.15/kubectl-minio_5.0.15_linux_amd64"
+minio_ns_needs_creation: false
+minio_version: 5.0.10
+minio_nodePort: 30080
+minio_targetPort: 9090
+# tenant
+tenant_name: "tenant"
+tenant_user: "minio"
+tenant_PW: "minio12345"
+tenant_servers: 1 # how many different pods will be spawned
+tenant_volumes: 1 # how many volumes will exist per pod
+tenant_nodePort: 30085
+tenant_storageClassName: standard # standard / local-path
+# client
+mc_location: "https://dl.min.io/client/mc/release/linux-amd64/mc"
+client_api_nodePort: 9000 # cannot be changed at the moment since a headless service cannot be assigned a clusterIP
+bucket_name: experiment
+minio_secret_name: minio-secret
+
+# Spark:
+################################################################################
+spark_ns: "{{ k8s_ns }}"
+spark_ns_needs_creation: false
+spark_version: 1.1.27
+spark_job_path: sparkjob-minio.yaml
+spark_serviceaccount: spark-allmighty
+spark_ui_port: 30070
+
+################################################################################
+# To be implemented:
+################################################################################
+
+# Cassandra:
+################################################################################
+cassandra_ns: "{{ k8s_ns }}"
+cassandra_ns_needs_creation: false
+cassandra_nodePort: 30200
+
+# HDFS:
+################################################################################
+hdfs_ns: "{{ k8s_ns }}"
+hdfs_ns_needs_creation: false
+hdfs_version: 24.3.0
+# zookeeper
+hdfs_zk_version: 3.8.3
+hdfs_zk_replicas: 1
+# hdfs_cluster
+hdfs_cl_version: 3.3.6
+hdfs_nodePort: 30300
+
+# Kafka:
+################################################################################
+kafka_ns: "{{ k8s_ns }}"
+kafka_ns_needs_creation: false
+kafka_nodePort: 30400
+
+# Flink:
+################################################################################

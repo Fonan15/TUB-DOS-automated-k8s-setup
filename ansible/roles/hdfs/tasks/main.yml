@@ -1,0 +1,75 @@
+---
+
+- name: "[hdfs] add helm repository"
+  kubernetes.core.helm_repository:
+    name: "stackable-stable"
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    repo_url: "https://repo.stackable.tech/repository/helm-stable/"
+
+- name: "[hdfs] Deploy specified version ({{ hdfs_version }}) of the zookeeper-operator inside specified namespace"
+  kubernetes.core.helm:
+    name: zookeeper-operator
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: stackable-stable/zookeeper-operator
+    chart_version: "{{ hdfs_version }}"
+    release_namespace: "{{ hdfs_ns }}"
+    create_namespace: "{{ hdfs_ns_needs_creation }}"
+    wait: true
+
+- name: "[hdfs] Deploy specified version ({{ hdfs_version }}) of the hdfs-operator inside specified namespace"
+  kubernetes.core.helm:
+    name: hdfs-operator
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: stackable-stable/hdfs-operator
+    chart_version: "{{ hdfs_version }}"
+    release_namespace: "{{ hdfs_ns }}"
+    create_namespace: "{{ hdfs_ns_needs_creation }}"
+    wait: true
+
+- name: "[hdfs] Deploy specified version ({{ hdfs_version }}) of the commons-operator inside specified namespace"
+  kubernetes.core.helm:
+    name: commons-operator
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: stackable-stable/commons-operator
+    chart_version: "{{ hdfs_version }}"
+    release_namespace: "{{ hdfs_ns }}"
+    create_namespace: "{{ hdfs_ns_needs_creation }}"
+    wait: true
+
+- name: "[hdfs] Deploy specified version ({{ hdfs_version }}) of the secret-operator inside specified namespace"
+  kubernetes.core.helm:
+    name: secret-operator
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: stackable-stable/secret-operator
+    chart_version: "{{ hdfs_version }}"
+    release_namespace: "{{ hdfs_ns }}"
+    create_namespace: "{{ hdfs_ns_needs_creation }}"
+    wait: true
+
+- name: "[hdfs] Deploy specified version ({{ hdfs_version }}) of the listener-operator inside specified namespace"
+  kubernetes.core.helm:
+    name: listener-operator
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: stackable-stable/listener-operator
+    chart_version: "{{ hdfs_version }}"
+    release_namespace: "{{ hdfs_ns }}"
+    create_namespace: "{{ hdfs_ns_needs_creation }}"
+    wait: true
+
+#- name: "[hdfs] Deploy zookeeper from template"
+#  kubernetes.core.k8s:
+#    state: present
+#    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+#    template: "zk.yaml"
+#
+#- name: "[hdfs] Deploy znode from template"
+#  kubernetes.core.k8s:
+#    state: present
+#    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+#    template: "znode.yaml"
+#    
+#- name: "[hdfs] Deploy hdfs main node from template"
+#  kubernetes.core.k8s:
+#    state: present
+#    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+#    template: "hdfs.yaml"

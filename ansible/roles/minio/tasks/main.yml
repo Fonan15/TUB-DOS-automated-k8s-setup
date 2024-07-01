@@ -1,0 +1,238 @@
+---
+
+# MinIO Operator
+
+- name: "[minio] add helm repository"
+  kubernetes.core.helm_repository:
+    name: "minio-operator"
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    repo_url: "https://operator.min.io"
+
+- name: "[minio] Deploy specified version ({{ minio_version }}) of the minio-operator inside specified namespace"
+  kubernetes.core.helm:
+    name: operator
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: minio-operator/operator
+    chart_version: "{{ minio_version }}"
+    release_namespace: "{{ minio_ns }}"
+    create_namespace: "{{ minio_ns_needs_creation }}"
+
+##############################################################################################
+# This part is a necessary evil since the "k8s_service" module for ansible
+# has the prerequisite of "openshift" and still does not the same as
+# "kubectl patch" - it removes the Endpoint and selector values so that it cannot be reached
+##############################################################################################
+
+- name: "[minio] Copy template of minio patch"
+  ansible.builtin.template:
+    src: console-patch.yaml.j2
+    dest: /tmp/console-patch.yaml
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "[minio] Expose nodePort of minio console (shell variant)"
+  ansible.builtin.shell:
+    cmd: "kubectl patch svc console --patch \"$(cat /tmp/console-patch.yaml)\" -n {{ minio_ns }} --kubeconfig {{ playbook_dir }}/kubeconfig"
+
+- name: "[minio] Delete template of minio patch"
+  ansible.builtin.file:
+    path: /tmp/console-patch.yaml
+    state: absent
+
+##############################################################################################
+# here is the attempt that does not work although correct according to:
+# https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_service_module.html
+###############################################################################################
+#- name: "[minio] Expose nodePort of minio console"
+#  k8s_service:
+#    state: present
+#    name: console
+#    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+#    namespace: "{{ minio_ns }}"
+#    definition:
+#      spec:
+#        ports:
+#        - name: http
+#          port: "{{ minio_targetPort }}"
+#          protocol: TCP
+#          targetPort: "{{ minio_targetPort }}"
+#          nodePort: "{{ minio_nodePort }}"
+#        type: NodePort
+###############################################################################################
+
+- name: "[minio] moving templated tokenAccess script to /tmp/"
+  template:
+    src: tokenAccess.sh.j2
+    dest: /tmp/tokenAccess.sh
+    owner: root
+    group: root
+    mode: 0775
+
+- name: "[minio] Execute tokenAccess.sh"
+  script: /tmp/tokenAccess.sh
+  register: results
+  
+- name: "[minio] getting Token"
+  debug:
+      var: results.stdout
+
+# We use this script in the parent-script again to create the entrypoint.txt so we don't delete here
+#- name: "[minio] Delete tokenAccess.sh"
+#  ansible.builtin.file:
+#    path: /tmp/tokenAccess.sh
+#    state: absent
+
+# MinIO Tenant
+
+- name: "[minio] Deploy specified version ({{ minio_version }}) of the minio-tenant inside specified namespace"
+  kubernetes.core.helm:
+    name: "{{ tenant_name }}"
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: minio-operator/tenant
+    chart_version: "{{ minio_version }}"
+    release_namespace: "{{ minio_ns }}"
+    create_namespace: "{{ minio_ns_needs_creation }}"
+    wait: true
+    values:
+      secrets:
+        name: "{{ tenant_name }}-env-configuration"
+        accessKey: "{{ tenant_user }}"
+        secretKey: "{{ tenant_PW }}"
+      tenant:
+        name: "{{ tenant_name }}"
+        configuration:
+          name: "{{ tenant_name }}-env-configuration"
+# not working yet but is announced to be the future way to declare the user/password
+#        configSecret:
+#          accessKey: "{{ tenant_user }}"
+#          secretKey: "{{ tenant_PW }}"
+        metrics:
+          enabled: true
+        prometheusOperator: true
+        pools:
+          - servers: "{{ tenant_servers }}"
+            name: pool-0
+            volumesPerServer: "{{ tenant_volumes }}"
+            storageClassName: "{{ tenant_storageClassName }}"
+        buckets: 
+          - name: "{{ bucket_name }}"
+
+- name: "[minio] Sleep for 45 seconds to give the tenant enough time to setup"
+  ansible.builtin.wait_for:
+    timeout: 45
+  delegate_to: localhost
+
+- name: "[minio] Expose nodePort of minio tenant console (shell variant)"
+  ansible.builtin.shell:
+    cmd: "kubectl get service {{ tenant_name }}-console -n {{ minio_ns }} -o yaml --kubeconfig {{ playbook_dir }}/kubeconfig > /tmp/service_config.yaml"
+  retries: 100
+  delay: 10
+  register: console_up
+  until: "console_up is not failed"
+
+- name: "[minio] Modify existing service_config.yaml before redeploying it (1/5)"
+  ansible.builtin.lineinfile:
+    path: /tmp/service_config.yaml
+    regexp: '^  type: ClusterIP'
+    line: "  type: NodePort"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "[minio] Modify existing service_config.yaml before redeploying it (2/5)"
+  ansible.builtin.lineinfile:
+    path: /tmp/service_config.yaml
+    regexp: '^  - (?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
+    state: absent
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "[minio] Modify existing service_config.yaml before redeploying it (3/5)"
+  ansible.builtin.lineinfile:
+    path: /tmp/service_config.yaml
+    regexp: "^  clusterIP*"
+    state: absent
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "[minio] Modify existing service_config.yaml before redeploying it (4/5)"
+  ansible.builtin.lineinfile:
+    path: /tmp/service_config.yaml
+    regexp: '^    targetPort: 9443'
+    line: "    targetPort: {{ tenant_nodePort }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "[minio] Modify existing service_config.yaml before redeploying it (5/5)"
+  ansible.builtin.lineinfile:
+    path: /tmp/service_config.yaml
+    regexp: "^    targetPort: {{ tenant_nodePort }}"
+    insertafter: "^    targetPort: {{ tenant_nodePort }}"
+    line: "    targetPort: {{ tenant_nodePort }}\n    nodePort: {{ tenant_nodePort }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "[minio] Expose nodePort of minio tenant console (shell variant)"
+  ansible.builtin.shell:
+    cmd: "kubectl apply -f /tmp/service_config.yaml --kubeconfig {{ playbook_dir }}/kubeconfig"
+
+- name: "[minio] Delete template of minio patch"
+  ansible.builtin.file:
+    path: /tmp/service_config.yaml
+    state: absent
+
+# MinIO Client
+
+- name: "[minio] Download mc to /usr/bin"
+  get_url:
+    url: "{{ mc_location }}"
+    dest: "/usr/bin/mc"
+    mode: 0755
+    force: true
+    owner: root
+    group: root
+  become: true
+
+##############################################################################################
+# This is how you could theoretically create a bucket via ansible:
+##############################################################################################
+
+#- name: "[minio] Port forward {{ tenant_name }}-hl"
+#  ansible.builtin.shell:
+#    cmd: "( ( nohup kubectl port-forward svc/{{ tenant_name }}-hl {{ client_api_nodePort }} -n {{ minio_ns}} --kubeconfig {{ playbook_dir }}/kubeconfig </dev/null 1>/dev/null 2>&1 ) &)"
+#
+#- name: "[minio] set-up minio-client connection"
+#  ansible.builtin.shell:
+#    cmd: "mc alias set {{ tenant_name }} https://127.0.0.1:{{ client_api_nodePort }} {{ tenant_user }} {{ tenant_PW }} --insecure"
+#
+#- name: "[minio] creating bucket \"{{ bucket_name }}\""
+#  ansible.builtin.shell:
+#    cmd: "mc mb {{ tenant_name }}/{{ bucket_name }} --insecure"
+#
+#- name: "[minio] copying demo data"
+#  ansible.builtin.shell:
+#    cmd: "mc cp {{ playbook_dir }}/roles/minio/spark-job/templates/2018_Yellow_Taxi_Trip_Data.csv {{ tenant_name }}/{{ bucket_name }}/nyc-taxi-data.csv --insecure"
+#  when: spark_job_path == "sparkjob-minio.yaml"
+#
+#- name: "[minio] generating secret to use within spark job"
+#  ansible.builtin.shell:
+#    cmd: "kubectl create secret generic {{ minio_secret_name }} --from-literal=AWS_ACCESS_KEY_ID={{ tenant_user }} --from-literal=AWS_SECRET_ACCESS_KEY={{ tenant_PW }} --from-literal=ENDPOINT={{ tenant_name }} --from-literal=AWS_REGION=us-east-1 --namespace {{ spark_ns }} --kubeconfig {{ playbook_dir }}/kubeconfig"
+#
+#- name: "[minio] Delete port-forward of {{ tenant_name }}-hl"
+#ansible.builtin.shell:
+#    cmd: "killall kubectl"
+
+##############################################################################################
+# Manually it would work this way
+# but in reality the MinIO client set off an error that the connection was reset (although it worked before)
+##############################################################################################
+# kubectl port-forward svc/tenant-hl 9000 -n experiment --kubeconfig kubeconfig
+# mc alias set tenant https://localhost:9000 minio minio12345 --insecure
+# mc mb tenant/experiment --insecure
+# mc cp 2018_Yellow_Taxi_Trip_Data.csv tenant/experiment/nyc-taxi-data.csv --insecure
+# kubectl create secret generic minio-secret --from-literal=AWS_ACCESS_KEY_ID=minio --from-literal=AWS_SECRET_ACCESS_KEY=minio12345 --from-literal=ENDPOINT=tenant --from-literal=AWS_REGION=us-east-1 --namespace experiment --kubeconfig /home/jh/bachelor/ansible/kubeconfig

@@ -1,0 +1,21 @@
+---
+
+# adapted from https://github.com/thedatabaseme/ansible-kind (25.03.2024)
+
+- name: "[precheck_kind] Check if KinD already installed into {{ kind_install_dir }}"
+  stat:
+    path: "{{ kind_install_dir }}/kind"
+  register: kind_status
+
+- name: "[precheck_kind] Get latest KinD release"
+  uri:
+    url: "{{ kind_git }}/releases/latest"
+    return_content: true
+    body_format: json
+  register: kind_latest_release
+  when: kind_version == 'latest'
+
+- name: "[precheck_kind] Set version to install"
+  set_fact:
+    kind_version: "{{ kind_latest_release.json.tag_name }}"
+  when: kind_version == 'latest'

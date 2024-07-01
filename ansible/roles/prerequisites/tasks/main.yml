@@ -1,0 +1,35 @@
+---
+
+- name: "[prerequisites] Installing docker"
+  apt:
+    name: docker.io
+    state: present
+
+- name: "[prerequisites] Installing pip"
+  apt:
+    name: pip
+    state: present
+
+- name: "[prerequisites] Installing openshift"
+  apt:
+    name: openshift-imagebuilder
+    state: present
+
+- name: "[install_k8s_tools] Install kubectl with option --classic"
+  community.general.snap:
+    name: kubectl
+    classic: true
+
+- name: "[install_k8s_tools] Install helm with option --classic"
+  community.general.snap:
+    name: helm
+    classic: true
+
+- name: "[install_k8s_tools] Install collection kubernetes.core"
+  community.general.ansible_galaxy_install:
+    type: collection
+    name: kubernetes.core
+
+- name: "[install_k8s_tools] Install k8s python library"
+  ansible.builtin.pip:
+    name: kubernetes

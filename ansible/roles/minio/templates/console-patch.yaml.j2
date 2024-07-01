@@ -1,0 +1,8 @@
+spec:
+  ports:
+  - name: http
+    port: {{ minio_targetPort }}
+    protocol: TCP
+    targetPort: {{ minio_targetPort }}
+    nodePort: {{ minio_nodePort }}
+  type: NodePort

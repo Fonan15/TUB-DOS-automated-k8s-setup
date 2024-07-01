@@ -1,0 +1,37 @@
+---
+
+- name: "[prometheus] add helm repository"
+  kubernetes.core.helm_repository:
+    name: "prometheus-community"
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    repo_url: "https://prometheus-community.github.io/helm-charts"
+
+- name: "[prometheus] Deploy specified (latest) version of Prometheus chart inside specified namespace"
+  kubernetes.core.helm:
+    name: prometheus
+    kubeconfig: "{{ playbook_dir }}/kubeconfig"
+    chart_ref: prometheus-community/kube-prometheus-stack
+    release_namespace: "{{ prometheus_ns }}"
+    chart_version: "{{ prometheus_chart_version }}"
+    create_namespace: "{{ prometheus_ns_needs_creation }}"
+    values:
+      kube-state-metrics:
+        nameOverride: "{{ prometheus_ns }}-kubestatemetrics"
+      prometheusOperator:
+        fullnameOverride: "{{ prometheus_ns }}-prometheusoperator"
+      prometheus:
+        serviceMonitor:
+          selfMonitor: false
+        service:
+          type: NodePort
+          nodePort: "{{ prometheus_nodePort }}"
+        prometheusSpec:
+          scrapeInterval: 10s
+      grafana:
+        enabled: true
+        adminPassword: "{{ grafana_PW }}"
+        service:
+          nodePort: "{{ grafana_nodePort }}"
+          type: NodePort
+      alertmanager:
+        enabled: true

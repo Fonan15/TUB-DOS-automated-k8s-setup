@@ -1,0 +1,35 @@
+---
+
+- name: "[precheck_kind] Check if KinD already installed into {{ kind_install_dir }}"
+  stat:
+    path: "{{ kind_install_dir }}/kind"
+  register: kind_status
+
+- name: "[kind] KinD is not installed"
+  fail:
+    msg: "KinD is NOT installed under the specified location {{ kind_install_dir }}/kind"
+  when: not kind_status.stat.exists
+
+- name: "[kind] check for existing clusters"
+  shell:
+    cmd: "kind get clusters"
+  register: existing_kind_clusters
+
+- name: "[kind] moving templated cluster config to /tmp/"
+  template:
+    src: kind-cluster.yaml.j2
+    dest: /tmp/kind-cluster.yaml
+    owner: root
+    group: root
+    mode: 0660
+  when: kind_cluster_name not in existing_kind_clusters.stdout
+
+- name: "[kind] Create KinD Cluster"
+  shell:
+    cmd: "kind create cluster --config /tmp/kind-cluster.yaml"
+  when: kind_cluster_name not in existing_kind_clusters.stdout
+
+- name: "[kind] deleting templated cluster config from /tmp/"
+  ansible.builtin.file:
+    path: /tmp/kind-cluster.yaml
+    state: absent

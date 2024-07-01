@@ -1,0 +1,16 @@
+---
+
+- name: "[prerequisites] Installing docker"
+  apt:
+    name: docker.io
+    state: present
+
+- name: "[prerequisites] Installing pip"
+  apt:
+    name: pip
+    state: present
+
+- name: "[prerequisites] Installing openshift"
+  apt:
+    name: openshift-imagebuilder
+    state: present
