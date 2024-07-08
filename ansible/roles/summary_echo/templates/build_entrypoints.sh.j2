@@ -49,7 +49,7 @@ echo "===============================" >> {{ playbook_dir }}/entrypoints.txt
 echo "" >> {{ playbook_dir }}/entrypoints.txt
 
 {% if Flink_Spark == "spark" %}
-    echo "The Kubernetes cluster is running a spark instance with a job from \"{{ spark_job_path }}\"" >> {{ playbook_dir }}/entrypoints.txt
+    echo "The Kubernetes cluster is running a spark instance with a possible job configured at: \"{{ spark_job_path }}\"" >> {{ playbook_dir }}/entrypoints.txt
 {% else %}
     echo "The Kubernetes cluster is running a flink instance" >> {{ playbook_dir }}/entrypoints.txt
 {% endif %}
